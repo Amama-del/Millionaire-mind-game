@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Millionaire Mind Game</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #F0D98C;
+    --gold-dark: #8B6914;
+    --bg: #0A0A0F;
+    --bg2: #12121A;
+    --bg3: #1A1A26;
+    --border: rgba(201,168,76,0.2);
+    --border-bright: rgba(201,168,76,0.5);
+    --text: #F0EAD6;
+    --text-muted: #8A8270;
+    --text-dim: #5A5448;
+    --green: #2ECC71;
+    --green-bg: rgba(46,204,113,0.1);
+    --blue: #4A9FD4;
+    --blue-bg: rgba(74,159,212,0.1);
+    --amber: #E8A838;
+    --amber-bg: rgba(232,168,56,0.1);
+    --red: #E05252;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 4rem; position: relative; z-index: 1; }
+
+  /* HEADER */
+  .header { text-align: center; padding: 2rem 0 1.5rem; }
+  .header-emblem {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem; font-size: 22px;
+  }
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px; font-weight: 400;
+    color: var(--gold-light); letter-spacing: 0.3px;
+    margin-bottom: 6px;
+  }
+  .header p { font-size: 14px; color: var(--text-muted); }
+
+  /* STATS */
+  .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .stat-card {
+    background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px 12px; text-align: center;
+  }
+  .stat-card .num { font-size: 22px; font-weight: 600; color: var(--gold); }
+  .stat-card .lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; background: var(--bg2); border-radius: var(--radius-sm); padding: 4px; border: 0.5px solid var(--border); }
+  .tab {
+    flex: 1; padding: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; background: none;
+    color: var(--text-muted); border-radius: 6px; transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .tab.active { background: var(--bg3); color: var(--gold); border: 0.5px solid var(--border); }
+  .screen { display: none; } .screen.active { display: block; }
+
+  /* JOURNEY */
+  .journey-map { display: flex; flex-direction: column; gap: 8px; }
+  .chapter-card {
+    background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .chapter-card:hover:not(.locked) { border-color: var(--border-bright); background: var(--bg3); }
+  .chapter-card.locked { opacity: 0.4; cursor: not-allowed; }
+  .chapter-card.completed { border-left: 2px solid var(--green); }
+  .chapter-card.active-chapter { border-left: 2px solid var(--gold); }
+  .ch-header { display: flex; align-items: center; gap: 12px; }
+  .ch-num {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; flex-shrink: 0;
+  }
+  .ch-num.done { background: var(--green-bg); color: var(--green); border: 0.5px solid rgba(46,204,113,0.3); }
+  .ch-num.current { background: var(--amber-bg); color: var(--amber); border: 0.5px solid rgba(232,168,56,0.3); }
+  .ch-num.locked-num { background: var(--bg3); color: var(--text-dim); }
+  .ch-title { flex: 1; }
+  .ch-title h3 { font-size: 14px; font-weight: 500; color: var(--text); }
+  .ch-title p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .ch-pct { font-size: 13px; font-weight: 600; }
+  .progress-bar { height: 3px; background: var(--bg3); border-radius: 2px; margin-top: 10px; }
+  .progress-fill { height: 100%; border-radius: 2px; background: var(--gold); transition: width 0.3s; }
+  .progress-fill.done { background: var(--green); }
+
+  /* SIDE PANEL */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 90; backdrop-filter: blur(2px); }
+  .overlay.open { display: block; }
+  .detail-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 440px;
+    background: var(--bg2); border-left: 0.5px solid var(--border);
+    z-index: 100; overflow-y: auto; padding: 0; display: none; flex-direction: column;
+  }
+  .detail-panel.open { display: flex; }
+  .panel-header {
+    padding: 1.25rem 1.25rem 1rem; border-bottom: 0.5px solid var(--border);
+    position: sticky; top: 0; background: var(--bg2); z-index: 10;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  }
+  .close-btn {
+    background: var(--bg3); border: 0.5px solid var(--border); color: var(--text-muted);
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .panel-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .panel-title { font-family: 'DM Serif Display', serif; font-size: 20px; font-weight: 400; color: var(--gold-light); }
+  .panel-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* TASK ITEMS */
+  .section-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 1px;
+    color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;
+  }
+  .task-item {
+    padding: 12px; border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); cursor: pointer;
+    display: flex; align-items: flex-start; gap: 10px;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--bg);
+  }
+  .task-item:hover { border-color: var(--border-bright); }
+  .task-item.done-task { background: var(--bg3); opacity: 0.65; }
+  .task-check {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid var(--border-bright); flex-shrink: 0; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    transition: all 0.15s;
+  }
+  .task-check.checked { background: var(--green); border-color: var(--green); color: white; }
+  .task-type {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; display: inline-block; margin-bottom: 5px; letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .type-action { background: var(--green-bg); color: var(--green); }
+  .type-understand { background: var(--blue-bg); color: var(--blue); }
+  .type-declare { background: var(--amber-bg); color: var(--amber); }
+  .task-text { font-size: 13px; color: var(--text); line-height: 1.55; }
+  .principle-box {
+    background: var(--bg3); border-left: 2px solid var(--gold);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 12px 14px;
+  }
+  .principle-box p { font-size: 14px; color: var(--text); line-height: 1.6; }
+  .understand-text { font-size: 13px; color: var(--text-muted); line-height: 1.65; }
+  .declaration-box {
+    background: var(--amber-bg); border: 0.5px solid rgba(232,168,56,0.3);
+    border-radius: var(--radius-sm); padding: 14px;
+  }
+  .declaration-box p { font-size: 14px; color: var(--amber); line-height: 1.65; font-style: italic; }
+  .unlock-banner {
+    background: var(--green-bg); border: 0.5px solid rgba(46,204,113,0.3);
+    border-radius: var(--radius-sm); padding: 12px; text-align: center;
+  }
+  .unlock-banner p { font-size: 13px; color: var(--green); font-weight: 500; }
+  .group-blocked {
+    background: rgba(224,82,82,0.08); border: 0.5px solid rgba(224,82,82,0.25);
+    border-radius: var(--radius-sm); padding: 12px; text-align: center;
+  }
+  .group-blocked p { font-size: 12px; color: var(--red); }
+
+  /* GROUP */
+  .player-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); margin-bottom: 8px;
+  }
+  .rank-num { font-size: 13px; font-weight: 600; color: var(--text-dim); width: 18px; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; flex-shrink: 0;
+  }
+  .av1 { background: rgba(201,168,76,0.2); color: var(--gold); }
+  .av2 { background: var(--green-bg); color: var(--green); }
+  .av3 { background: var(--blue-bg); color: var(--blue); }
+  .av4 { background: rgba(160,120,220,0.15); color: #A078DC; }
+  .player-info { flex: 1; }
+  .player-info h4 { font-size: 14px; font-weight: 500; color: var(--text); }
+  .player-info p { font-size: 12px; color: var(--text-muted); }
+  .mini-bar { height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 5px; }
+  .mini-fill { height: 100%; border-radius: 2px; background: var(--gold); }
+  .points-badge { font-size: 15px; font-weight: 600; color: var(--gold); }
+
+  /* DECLARATIONS */
+  .decl-item {
+    background: var(--bg2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 8px;
+  }
+  .decl-item p { font-size: 14px; color: var(--text); line-height: 1.65; font-style: italic; }
+  .decl-num { font-size: 11px; color: var(--gold); font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px; }
+
+  .section-heading { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .section-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.5; }
+
+  @media (max-width: 600px) {
+    .detail-panel { max-width: 100%; }
+    .header h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-emblem">&#9670;</div>
+    <h1>Millionaire Mind Game</h1>
+    <p>Complete every task. Hold everyone accountable. Build the millionaire mind together.</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="num" id="s-complete">0</div><div class="lbl">tasks done</div></div>
+    <div class="stat-card"><div class="num" id="s-wf">0/18</div><div class="lbl">chapters</div></div>
+    <div class="stat-card"><div class="num" id="s-pts">0</div><div class="lbl">your points</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('journey')">Journey</button>
+    <button class="tab" onclick="switchTab('group')">Group</button>
+    <button class="tab" onclick="switchTab('declarations')">Declarations</button>
+  </div>
+
+  <div class="screen active" id="screen-journey">
+    <div class="journey-map" id="journey-map"></div>
+  </div>
+
+  <div class="screen" id="screen-group">
+    <p class="section-heading">Your group</p>
+    <p class="section-sub">Everyone must complete a chapter before the journey advances together.</p>
+    <div id="group-list"></div>
+  </div>
+
+  <div class="screen" id="screen-declarations">
+    <p class="section-heading">Daily declarations</p>
+    <p class="section-sub">Say these out loud every morning with your hand on your heart.</p>
+    <div id="declarations-list"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="detail-panel" id="detail-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title" id="panel-title">Chapter</div>
+      <div class="panel-sub" id="panel-sub"></div>
+    </div>
+    <button class="close-btn" onclick="closePanel()">&#10005;</button>
+  </div>
+  <div class="panel-body" id="panel-content"></div>
+</div>
+
+<script>
+const wealthFiles = [
+  {id:1,title:"I create my life",principle:"Rich people believe 'I create my life.' Poor people believe 'Life happens to me.'",understand:"You are at the steering wheel of your financial life. Victims say 'poor me' — rich people take full responsibility for every result.",actions:[{type:"action",text:"Every time you catch yourself blaming, justifying, or complaining, slide your index finger across your neck as a trigger — you are slitting your financial throat."},{type:"action",text:"Do a daily debrief: write down one thing that went well and one that didn't, then write 'How did I create each of these situations?'"},{type:"understand",text:"Identify 3 areas of your financial life where you have been playing the victim. Write them down and own them completely."}],declaration:"I create the exact level of my financial success. I am responsible for my results."},
+  {id:2,title:"Play to win",principle:"Rich people play the money game to WIN. Poor people play not to lose.",understand:"If your goal is just to pay the bills, that's exactly what you'll get. Rich people's goal is massive wealth and abundance.",actions:[{type:"action",text:"Write down two financial 'play to win' goals: your target annual income and your target net worth. Include a realistic but ambitious timeline."},{type:"action",text:"Go to an upscale restaurant and order a meal at 'market price' without asking the cost first. (No chicken!)"},{type:"understand",text:"Reflect: have you been playing defense with money? Write down what 'playing to win' would look like in your financial life."}],declaration:"My goal is to become a millionaire and more. I play the money game to win!"},
+  {id:3,title:"Commit to being rich",principle:"Rich people are COMMITTED to being rich. Poor people just want to be rich.",understand:"Most people have hidden negative beliefs about wealth that prevent them from truly committing. You must flush them out and release them.",actions:[{type:"action",text:"Write a short paragraph on exactly why creating wealth is important to you. Be specific — what will wealth give you?"},{type:"action",text:"With a friend or family member, place your hand on your heart and say out loud: 'I, [your name], commit to becoming a millionaire or more by [date].' Have them say: I believe in you."},{type:"understand",text:"List every negative belief you have about rich people or money. Challenge each one — is it actually true?"}],declaration:"I commit to being rich. I think like a rich person. I feel like a rich person. I am rich!"},
+  {id:4,title:"Think big",principle:"Rich people think BIG. Poor people think small.",understand:"The Law of Income: you will be paid in direct proportion to the value you deliver to the marketplace. The key factor is how many people you serve.",actions:[{type:"action",text:"Write down your natural talents — things you've always been good at. Identify specifically where and how you can use more of these gifts in your work."},{type:"action",text:"Brainstorm how you could solve problems for 10 times the number of people you currently affect. Come up with at least 3 strategies involving leverage."},{type:"understand",text:"Where are you currently thinking small? What would your business or career look like if you 10x'd your reach?"}],declaration:"I think big! I choose to help thousands and thousands of people. I am committed to providing enormous value to the world!"},
+  {id:5,title:"Focus on opportunities",principle:"Rich people focus on OPPORTUNITIES. Poor people focus on obstacles.",understand:"Rich people expect to succeed and take action despite risk. Poor people expect to fail and focus on what could go wrong.",actions:[{type:"action",text:"Identify something you've been waiting to start. Stop waiting — begin NOW from wherever you are with whatever you have."},{type:"action",text:"Practice optimism for one full day. Whatever anyone says is a problem, reframe it as an opportunity out loud."},{type:"action",text:"Make a list of 10 things you are grateful for and read it aloud. Then read it every morning for the next 30 days."}],declaration:"I focus on opportunities. I stretch beyond my comfort zone. I get in the game!"},
+  {id:6,title:"Admire the rich",principle:"Rich people ADMIRE other rich and successful people. Poor people resent them.",understand:"If you view rich people as bad in any way, you cannot become rich yourself. You cannot be something you despise.",actions:[{type:"action",text:"Practice the Huna philosophy: 'bless that which you want.' Look at beautiful homes, cars, and businesses. Whatever you see that you like, genuinely bless it and the owner."},{type:"action",text:"Write and send a short letter or email to someone highly successful telling them you admire their achievements."},{type:"understand",text:"Write down any resentment or judgement you have about wealthy people. Then challenge each belief — is it really true of ALL rich people?"}],declaration:"I admire rich and successful people. I bless rich people and I love money. I am open to receive massive amounts of money into my life!"},
+  {id:7,title:"Associate with winners",principle:"Rich people associate with POSITIVE, SUCCESSFUL people. Poor people associate with negative or unsuccessful people.",understand:"You become like the people you spend the most time with. If you want to be rich, model rich people's mindset and strategies.",actions:[{type:"action",text:"Read a biography of someone extremely rich and successful (Carnegie, Rockefeller, Buffett, Gates, etc.). Study their mindset specifically."},{type:"action",text:"Join a high-end club or spend time in an upscale hotel. Get comfortable in that environment."},{type:"action",text:"Identify one negative situation or person dragging you down. Make a plan to reduce time with that person or exit that situation."},{type:"action",text:"Stop watching trash TV for 30 days. Replace with educational or inspirational content."}],declaration:"I model rich and successful people. I associate with positive, successful people. I am a success!"},
+  {id:8,title:"Promote your value",principle:"Rich people are willing to PROMOTE themselves and their value. Poor people think negatively about selling.",understand:"Resenting promotion is one of the greatest obstacles to success. If you aren't willing to let people know you exist, you'll stay broke.",actions:[{type:"action",text:"Rate your current product or service from 1-10 on how much you believe in its value. If 7-9, revise it. If 6 or below, find something you truly believe in."},{type:"action",text:"Read at least one book on marketing and sales. Commit to becoming an expert in both areas."},{type:"understand",text:"Write down your hesitations about self-promotion. Where do these beliefs come from? Challenge each one."}],declaration:"I promote my value to others with passion and enthusiasm. I am an excellent marketer and I comfortably sell my products and ideas to others!"},
+  {id:9,title:"Be bigger than problems",principle:"Rich people are BIGGER than their problems. Poor people are smaller than their problems.",understand:"The secret to success is not to avoid problems — it's to grow yourself so that you are bigger than any problem.",actions:[{type:"action",text:"Whenever you feel upset over a big problem, say 'mini me, mini me,' then say 'I can handle this. I am bigger than any problem.'"},{type:"action",text:"Write down your current biggest problem. Then list 10 specific actions you could take to resolve or improve the situation."},{type:"understand",text:"Reflect on how you typically respond to problems. Do you shrink or grow? Write about a time you faced a problem head-on."}],declaration:"I am bigger than any problem. I can handle any problem. Nothing is going to stop me from creating success and happiness!"},
+  {id:10,title:"Be an excellent receiver",principle:"Rich people are EXCELLENT receivers. Poor people are poor receivers.",understand:"Most people block wealth because they feel unworthy of receiving. You must practice being open to receiving compliments, money, and gifts fully.",actions:[{type:"action",text:"Practice receiving: every time someone gives you a compliment, simply say 'Thank you' — don't deflect or immediately compliment back."},{type:"action",text:"Every time you find or receive any money — even a penny — enthusiastically say out loud: 'I'm a money magnet! Thank you, thank you, thank you!'"},{type:"action",text:"Pamper yourself at least once this month. A massage, nice dinner, or any treat that allows you to receive without guilt."},{type:"understand",text:"On a scale of 1-10, how good are you at receiving? Write down 3 ways you typically deflect or reject good things coming to you."}],declaration:"I am an excellent receiver. I am open and willing to receive massive amounts of money into my life!"},
+  {id:11,title:"Get paid based on results",principle:"Rich people choose to get paid based on RESULTS. Poor people choose to be paid for time.",understand:"A steady paycheck gives security but limits your earnings to your time. Rich people build income streams based on performance, ownership, and results.",actions:[{type:"action",text:"If employed: create and propose a compensation plan to your employer that includes payment based on your results. Put this in writing and present it."},{type:"action",text:"If self-employed: review your pricing — are you charging by the hour or by value delivered? Redesign at least one offering to be results-based."},{type:"understand",text:"List all your current income sources. Which are time-based? Which are results-based? What would need to change?"}],declaration:"I choose to get paid based on my results. I choose freedom and fulfillment. I choose to do what I love and get richly rewarded!"},
+  {id:12,title:'Think "both"',principle:"Rich people think 'BOTH.' Poor people think 'either/or.'",understand:"Rich people live in abundance. When confronted with an either/or choice, always ask: 'How can I have both?' This transforms your model from scarcity to possibility.",actions:[{type:"action",text:"Practice the 'both' mindset all week. Every time you face an either/or decision, ask: 'How can I have both?' Write down at least 3 examples."},{type:"action",text:"Each time you spend money this week, say to yourself: 'This money will go through hundreds of people and create value for all of them.'"},{type:"understand",text:"Think of one area where you've been living in scarcity. Write down how you could create a path to have both things you want."}],declaration:"I always think 'both.' I live in a world of abundance. I have plenty of money and plenty of time. I have it all!"},
+  {id:13,title:"Focus on net worth",principle:"Rich people focus on their NET WORTH. Poor people focus on working income.",understand:"Net worth is the true measure of wealth. Rich people track and grow 4 factors: income, savings, investment returns, and reducing costs.",actions:[{type:"action",text:"Create your net worth statement right now. List everything you own (assets) and everything you owe (liabilities). Subtract to get your current net worth. Update this every quarter."},{type:"action",text:"Identify specific actions to improve all 4 net worth factors: increase income, increase savings, increase investment returns, decrease cost of living."},{type:"action",text:"Consult with a financially successful financial planner. Ask friends for referrals to find a reputable one."}],declaration:"I focus on building my net worth! I am a millionaire in the making!"},
+  {id:14,title:"Manage money well",principle:"Rich people MANAGE their money well. Poor people mismanage their money.",understand:"Wealthy people are not smarter — they just have better money habits. You must manage money to master money. Start with whatever you have, even a dollar.",actions:[{type:"action",text:"Open a Financial Freedom Account (FFA). Put 10% of all after-tax income into it. This money is NEVER spent — only invested for passive income at retirement."},{type:"action",text:"Create a Financial Freedom jar at home. Deposit money into it every single day — even just a coin. This builds the daily habit."},{type:"action",text:"Set up 6 accounts and allocate your after-tax income: 50% Necessities, 10% Financial Freedom, 10% Play, 10% Long-Term Savings, 10% Education, 10% Give."},{type:"action",text:"Start managing money TODAY. Even if you only have $1 — put 10 cents in your FFA and 10 cents in your Play jar. The habit matters more than the amount."}],declaration:"I am an excellent money manager. I manage my money and my money grows!"},
+  {id:15,title:"Make money work for you",principle:"Rich people have their MONEY WORK HARD for them. Poor people work hard for money.",understand:"Working hard alone will never make you rich. You must put your money to work through investments, leverage, and passive income streams.",actions:[{type:"action",text:"Get educated: read at least one investment book per month. Take an investment seminar. Choose one investment arena to become an expert in."},{type:"action",text:"Shift your focus from active income to passive income. List 3 specific strategies to create income without working — in investment or business."},{type:"action",text:"Research one real estate investment opportunity in your area as a learning exercise. Don't wait to buy real estate — buy real estate and wait."}],declaration:"My money works hard for me and makes me more and more money. I am financially free!"},
+  {id:16,title:"Act in spite of fear",principle:"Rich people ACT IN SPITE OF FEAR. Poor people let fear stop them.",understand:"Action is the bridge between the inner world and the outer world. Fear, doubt, and worry are the #1 obstacle. The cure is action — feel the fear and do it anyway.",actions:[{type:"action",text:"List your 3 greatest fears about money and wealth. For each, write: what would you do if it actually happened? Could you survive? Could you make a comeback?"},{type:"action",text:"Practice getting out of your comfort zone deliberately this week: speak to someone you normally wouldn't, ask for a raise, or wake up an hour earlier."},{type:"action",text:"Employ 'power thinking': every time the little voice says 'I can't' or 'I don't feel like it,' do it anyway. Show your mind that YOU are the boss."},{type:"understand",text:"What is one financial action you have been postponing because of fear? Commit to doing it within 7 days. Write it down with a specific date."}],declaration:"I act in spite of fear. I act in spite of doubt. I act in spite of worry. I step out of my comfort zone and win!"},
+  {id:17,title:"Constantly learn and grow",principle:"Rich people CONSTANTLY LEARN AND GROW. Poor people think they already know.",understand:"The three most dangerous words: 'I know that.' If you're not rich and happy, there's something you still need to learn. Go from know-it-all to learn-it-all.",actions:[{type:"action",text:"Commit to growth: every single month read at least one book on money, business, or personal development. No exceptions."},{type:"action",text:"Consider hiring a personal coach or accountability partner to keep you on track with your financial goals."},{type:"understand",text:"Write down 3 areas related to money or wealth where you have been acting like you know it all. What would you need to learn in each area to truly master it?"}],declaration:"I am committed to constantly learning and growing. I am committed to my success and living the life of my dreams!"}
+];
+
+const partOne = {
+  id:0,title:"Your Money Blueprint",subtitle:"Part 1 — Foundation",
+  principle:"Your subconscious financial blueprint determines your financial destiny more than any strategy or tactic.",
+  understand:"Four key influences shape your money blueprint: verbal programming, modeling, specific incidents, and conditioning. Identify and reprogram them all.",
+  tasks:[
+    {type:"understand",text:"Understand that your financial blueprint — your preset subconscious program about money — determines your financial destiny more than any strategy or tactic."},
+    {type:"understand",text:"Identify how verbal programming shaped your beliefs. Write down 3-5 money messages you received growing up (e.g. 'money doesn't grow on trees')."},
+    {type:"action",text:"Say aloud with your hand on your heart: 'What I heard about money isn't necessarily true. I choose to adopt new ways of thinking that support my happiness and success.' Touch your head: 'I have a millionaire mind!'"},
+    {type:"understand",text:"Examine modeling: how did your parents handle money? Write down how their financial behavior may have shaped your own patterns."},
+    {type:"action",text:"Say aloud: 'What I modeled around money was their way. I choose my way.' Touch your head: 'I have a millionaire mind!'"},
+    {type:"understand",text:"Identify one specific childhood incident that created a negative belief about money. Write it down, then write the limiting belief it created."},
+    {type:"action",text:"Say aloud: 'I release my nonsupportive money experiences from the past and create a new and rich future.' Touch your head: 'I have a millionaire mind!'"},
+    {type:"action",text:"Say aloud every single day: 'I observe my thoughts and entertain only those that empower me.' Touch your head: 'I have a millionaire mind!'"}
+  ],
+  declaration:"My inner world creates my outer world. I have a millionaire mind."
+};
+
+const allDeclarations = [
+  "My inner world creates my outer world. I have a millionaire mind.",
+  "What I heard about money isn't necessarily true. I choose to adopt new ways of thinking that support my happiness and success.",
+  "What I modeled around money was their way. I choose my way.",
+  "I release my nonsupportive money experiences from the past and create a new and rich future.",
+  "I observe my thoughts and entertain only those that empower me.",
+  "I create the exact level of my financial success. I am responsible for my results.",
+  "My goal is to become a millionaire and more. I play the money game to win!",
+  "I commit to being rich. I think like a rich person. I feel like a rich person. I am rich!",
+  "I think big! I choose to help thousands and thousands of people. I am committed to providing enormous value to the world!",
+  "I focus on opportunities. I stretch beyond my comfort zone. I get in the game!",
+  "I admire rich and successful people. I bless rich people and I love money. I am open to receive massive amounts of money into my life!",
+  "I model rich and successful people. I associate with positive, successful people. I am a success!",
+  "I promote my value to others with passion and enthusiasm. I am an excellent marketer and I comfortably sell my products and ideas to others!",
+  "I am bigger than any problem. I can handle any problem. Nothing is going to stop me from creating success and happiness!",
+  "I am an excellent receiver. I am open and willing to receive massive amounts of money into my life!",
+  "I choose to get paid based on my results. I choose freedom and fulfillment. I choose to do what I love and get richly rewarded!",
+  "I always think 'both.' I live in a world of abundance. I have plenty of money and plenty of time. I have it all!",
+  "I focus on building my net worth! I am a millionaire in the making!",
+  "I am an excellent money manager. I manage my money and my money grows!",
+  "My money works hard for me and makes me more and more money. I am financially free!",
+  "I act in spite of fear. I act in spite of doubt. I act in spite of worry. I step out of my comfort zone and win!",
+  "I am committed to constantly learning and growing. I am committed to my success and living the life of my dreams!"
+];
+
+const groupMembers = [
+  {name:"You",initials:"YO",av:"av1",pts:0,done:0},
+  {name:"Alex",initials:"AL",av:"av2",pts:0,done:0},
+  {name:"Jordan",initials:"JO",av:"av3",pts:0,done:0},
+  {name:"Sam",initials:"SA",av:"av4",pts:0,done:0}
+];
+
+let state = JSON.parse(localStorage.getItem('mmg_v2') || '{}');
+function save(){ localStorage.setItem('mmg_v2', JSON.stringify(state)); }
+function taskKey(chId,i){ return `c${chId}_t${i}`; }
+
+function getProgress(chId, tasks){
+  let done=0;
+  tasks.forEach((_,i)=>{ if(state[taskKey(chId,i)]) done++; });
+  return {done, total:tasks.length};
+}
+
+function allChapters(){
+  return [
+    {...partOne, id:0},
+    ...wealthFiles.map(wf=>({id:wf.id, title:`WF #${wf.id}: ${wf.title}`, subtitle:`Wealth File ${wf.id} of 17`, tasks:wf.actions, declaration:wf.declaration, principle:wf.principle, understand:wf.understand}))
+  ];
+}
+
+function isUnlocked(idx){
+  if(idx===0) return true;
+  const chs = allChapters();
+  const prev = chs[idx-1];
+  const p = getProgress(prev.id, prev.tasks);
+  return p.done===p.total && p.total>0;
+}
+
+function globalStats(){
+  let totalDone=0, totalTasks=0, wfDone=0;
+  allChapters().forEach(ch=>{
+    const p=getProgress(ch.id,ch.tasks);
+    totalDone+=p.done; totalTasks+=p.total;
+    if(p.done===p.total&&p.total>0) wfDone++;
+  });
+  return {totalDone, totalTasks, wfDone, pts:totalDone*10};
+}
+
+function renderJourney(){
+  const map = document.getElementById('journey-map');
+  map.innerHTML='';
+  const chs = allChapters();
+  chs.forEach((ch,idx)=>{
+    const prog=getProgress(ch.id,ch.tasks);
+    const unlocked=isUnlocked(idx);
+    const complete=prog.done===prog.total&&prog.total>0;
+    const pct=prog.total>0?Math.round(prog.done/prog.total*100):0;
+    const card=document.createElement('div');
+    card.className=`chapter-card${!unlocked?' locked':''}${complete?' completed':''}${unlocked&&!complete?' active-chapter':''}`;
+    card.innerHTML=`
+      <div class="ch-header">
+        <div class="ch-num ${complete?'done':unlocked?'current':'locked-num'}">${complete?'&#10003;':idx+1}</div>
+        <div class="ch-title"><h3>${ch.title}</h3><p>${ch.subtitle||''} &middot; ${prog.done}/${prog.total} tasks</p></div>
+        <div class="ch-pct" style="color:${complete?'var(--green)':unlocked?'var(--amber)':'var(--text-dim)'}">${pct}%</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill${complete?' done':''}" style="width:${pct}%"></div></div>`;
+    if(unlocked) card.onclick=()=>openPanel(ch,idx);
+    map.appendChild(card);
+  });
+  const s=globalStats();
+  document.getElementById('s-complete').textContent=s.totalDone;
+  document.getElementById('s-wf').textContent=`${s.wfDone}/18`;
+  document.getElementById('s-pts').textContent=s.pts;
+}
+
+function renderGroup(){
+  const list=document.getElementById('group-list');
+  const s=globalStats();
+  groupMembers[0].pts=s.pts; groupMembers[0].done=s.wfDone;
+  list.innerHTML='';
+  [...groupMembers].sort((a,b)=>b.pts-a.pts).forEach((m,rank)=>{
+    const pct=Math.round(m.done/18*100);
+    list.innerHTML+=`<div class="player-row">
+      <div class="rank-num">#${rank+1}</div>
+      <div class="avatar ${m.av}">${m.initials}</div>
+      <div class="player-info"><h4>${m.name}</h4><p>${m.done}/18 chapters &middot; ${m.pts} pts</p>
+      <div class="mini-bar"><div class="mini-fill" style="width:${pct}%"></div></div></div>
+      <div class="points-badge">${m.pts}</div></div>`;
+  });
+}
+
+function renderDeclarations(){
+  const list=document.getElementById('declarations-list');
+  list.innerHTML='';
+  allDeclarations.forEach((d,i)=>{
+    list.innerHTML+=`<div class="decl-item"><div class="decl-num">DECLARATION ${i+1}</div><p>${d}</p></div>`;
+  });
+}
+
+function openPanel(ch,idx){
+  document.getElementById('panel-title').textContent=ch.title;
+  const prog=getProgress(ch.id,ch.tasks);
+  document.getElementById('panel-sub').textContent=`${prog.done}/${prog.total} tasks complete`;
+  const body=document.getElementById('panel-content');
+  const complete=prog.done===prog.total&&prog.total>0;
+  body.innerHTML=`
+    ${ch.principle?`<div><p class="section-label">Core principle</p><div class="principle-box"><p>${ch.principle}</p></div></div>`:''}
+    ${ch.understand?`<p class="understand-text">${ch.understand}</p>`:''}
+    <div><p class="section-label">Tasks</p><div id="tasklist-${ch.id}"></div></div>
+    ${ch.declaration?`<div><p class="section-label">Declaration</p><div class="declaration-box"><p>"${ch.declaration}"</p></div></div>`:''}
+    <div id="status-${ch.id}">
+      ${complete?`<div class="unlock-banner"><p>&#10003; Chapter complete — next chapter unlocked!</p></div>`:`<div class="group-blocked"><p>Complete all tasks before the group can advance together.</p></div>`}
+    </div>`;
+  renderTaskList(ch);
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+
+function renderTaskList(ch){
+  const list=document.getElementById(`tasklist-${ch.id}`);
+  if(!list) return;
+  list.innerHTML='';
+  ch.tasks.forEach((task,i)=>{
+    const done=!!state[taskKey(ch.id,i)];
+    const lbl=task.type==='action'?'Do it':task.type==='understand'?'Understand it':'Declare it';
+    const cls=task.type==='action'?'type-action':task.type==='understand'?'type-understand':'type-declare';
+    const div=document.createElement('div');
+    div.className=`task-item${done?' done-task':''}`;
+    div.innerHTML=`<div class="task-check${done?' checked'}">${done?'&#10003;':''}</div>
+      <div style="flex:1"><span class="task-type ${cls}">${lbl}</span><p class="task-text">${task.text}</p></div>`;
+    div.onclick=()=>toggleTask(ch,i);
+    list.appendChild(div);
+  });
+}
+
+function toggleTask(ch,i){
+  const key=taskKey(ch.id,i);
+  if(state[key]) delete state[key]; else state[key]=true;
+  save();
+  renderTaskList(ch);
+  renderJourney();
+  const prog=getProgress(ch.id,ch.tasks);
+  const complete=prog.done===prog.total&&prog.total>0;
+  document.getElementById('panel-sub').textContent=`${prog.done}/${prog.total} tasks complete`;
+  const statusEl=document.getElementById(`status-${ch.id}`);
+  if(statusEl){
+    statusEl.innerHTML=complete
+      ?`<div class="unlock-banner"><p>&#10003; Chapter complete — next chapter unlocked!</p></div>`
+      :`<div class="group-blocked"><p>Complete all tasks before the group can advance together.</p></div>`;
+  }
+  const s=globalStats();
+  document.getElementById('s-complete').textContent=s.totalDone;
+  document.getElementById('s-wf').textContent=`${s.wfDone}/18`;
+  document.getElementById('s-pts').textContent=s.pts;
+}
+
+function closePanel(){
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('screen-'+name).classList.add('active');
+  if(name==='group') renderGroup();
+  if(name==='declarations') renderDeclarations();
+}
+
+renderJourney();
+</script>
+</body>
+</html>
